@@ -5,7 +5,7 @@
 LinguaShine is a tool designed to help users improve their English language skills. Whether you're a non-native speaker looking to improve your fluency or a native speaker looking to refine your grammar and vocabulary, LinguaShine has got you covered.
 
 ## Installation
-No installation is required. Simply visit the LinguaShine website to access the tool.
+No installation is required. Simply visit the [LinguaShine website](https://chenhuiyu-linguashine-main-lpazvv.streamlit.app/) to access the tool.
 
 ## Usage
 To use LinguaShine, follow these steps:

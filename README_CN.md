@@ -2,7 +2,7 @@
 LinguaShine 是一款旨在帮助用户提升英语语言技能的工具。无论您是非英语母语者，想要提高流利度，还是英语母语者，想要提高语法和词汇，LinguaShine 都能帮助您。
 
 ## 安装
-无需安装。只需访问LinguaShine 网站即可使用该工具。
+无需安装。只需访问[LinguaShine website](https://chenhuiyu-linguashine-main-lpazvv.streamlit.app/) 即可使用该工具。
 
 ## 使用
 使用 LinguaShine 的步骤如下：
