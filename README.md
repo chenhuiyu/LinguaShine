@@ -1,5 +1,7 @@
 # LinguaShine
 [中文版 README](./README_CN.md)
+
+
 LinguaShine is a tool designed to help users improve their English language skills. Whether you're a non-native speaker looking to improve your fluency or a native speaker looking to refine your grammar and vocabulary, LinguaShine has got you covered.
 
 ## Installation
