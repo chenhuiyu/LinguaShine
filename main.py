@@ -1,6 +1,37 @@
+import uuid
 import streamlit as st
 from langchain import PromptTemplate
 from langchain import OpenAI
+
+user_inputs = {}
+def get_text():
+    # Generate a unique ID for each session
+    if "user_id" not in st.session_state:
+        st.session_state.user_id = str(uuid.uuid4())
+
+    user_id = st.session_state.user_id
+    
+    if user_id not in user_inputs:
+        user_inputs[user_id] = 1
+    else:
+        user_inputs[user_id] += 1
+
+    if user_inputs[user_id] <= 10:
+        input_text = st.text_area(label="", placeholder="Input your text here...", key="text_input")
+
+        # Add the input to the session_state if it doesn't already exist
+        if "user_input_list" not in st.session_state:
+            st.session_state.user_input_list = []
+
+        # Append the input to the user_input_list
+        if input_text:
+            st.session_state.user_input_list.append(input_text)
+
+        return input_text
+    else:
+        st.warning("You have exceeded the maximum number of inputs (10).")
+        return ""
+
 
 template = """
     Below is a sentence or some keyword. Your goal is to generate text in the corresponding language and style based on the input text.
@@ -18,10 +49,10 @@ language_instructions_dict = {
 }
 
 style_instructions_dict = {
-    "小红书": "- 请将文本修改为适合小红书的风格，使用很多emoji、话题标签和简短、吸引人的短语。\n",
-    "豆瓣": "- 请将文本修改为适合豆瓣的风格，说话富有诗意、矫揉造作，不直抒胸臆。\n",
-    "微博": "- 请将文本修改为适合微博的风格，说话阴阳怪气，讽刺或者抬杠。\n",
-    "工作日报": "- 请将文本修改为适合工作报告的风格，应清晰、简洁、专业。\n",
+    "小红书": "- Using many emojis, hashtags, and exaggerated language.\n",
+    "豆瓣": "- Speaking poetically and affectedly, without expressing oneself directly.\n",
+    "微博": "- Speaking in a sarcastic or ambiguous way, often with the intention of mocking or arguing.\n",
+    "工作日报": "- Please modify the text to a style appropriate for a work report, it should be clear and professional.\n",
     "Instagram": "- Please make the text suitable for an Instagram post, which may include emojis, hashtags, and short, catchy phrases.\n",
     "Email": "- Please make the text suitable for an email, which should be polite, professional, and well-organized.\n",
     "Work Report": "- Please make the text suitable for a work progress report, which should be clear, concise, and informative.\n"
@@ -72,9 +103,6 @@ with col2:
 # Get the language-specific instructions and the style-specific instructions
 language = get_language_instructions(option_language)
 style = get_style_instructions(option_writing_style)
-def get_text():
-    input_text = st.text_area(label="", placeholder="Input your text here...", key="text_input")
-    return input_text
 
 input_text = get_text()
 # Define the input variables for the PromptTemplate
