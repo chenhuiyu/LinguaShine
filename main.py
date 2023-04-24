@@ -1,22 +1,44 @@
-import uuid
+import configparser
+import os
+
+import requests
 import streamlit as st
-from langchain import PromptTemplate
 from langchain import OpenAI
+from langchain.callbacks import get_openai_callback
 
-user_inputs = {}
-def get_text():
-    # Generate a unique ID for each session
-    if "user_id" not in st.session_state:
-        st.session_state.user_id = str(uuid.uuid4())
+LANGUAGE_INSTRUCTIONS_DICT = {
+    "Chinese": "- 请使用中文输出\n",
+    "English": "- Please output English.\n"
+}
 
-    user_id = st.session_state.user_id
-    
-    if user_id not in user_inputs:
-        user_inputs[user_id] = 1
-    else:
-        user_inputs[user_id] += 1
+STYLE_INSTRUCTIONS_DICT = {
+    "小红书": "- Using many emojis, hashtags, and exaggerated language.\n",
+    "豆瓣": "- Speaking poetically and affectedly, without expressing oneself directly.\n",
+    "微博": "- Speaking in a sarcastic or ambiguous way, often with the intention of mocking or arguing.\n",
+    "工作日报": "- Please modify the text to a style appropriate for a work report, it should be clear and professional and use a lot of jargons.\n",
+    "Instagram": "- Please make the text suitable for an Instagram post, which may include emojis, hashtags, and short, catchy phrases.\n",
+    "Email": "- Please make the text suitable for an email, which should be polite, professional, and well-organized. And use email format.\n",
+    "Work Report": "- Please make the text suitable for a work progress report, which should be clear, concise, and informative.\n"
+}
 
-    if user_inputs[user_id] <= 10:
+
+def get_user_ip():
+    try:
+        ip = requests.get("https://api64.ipify.org?format=json").json()['ip']
+    except Exception as e:
+        ip = "unknown"
+    return ip
+
+def get_text(user_inputs):
+    # Read the whitelist from the config file
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+    whitelist = set(config['whitelist']['ip_addresses'].split(', '))
+    # Get the user's IP address
+    user_ip = get_user_ip()
+
+    if user_ip in whitelist:
+        # If the user is in the whitelist, don't limit their inputs
         input_text = st.text_area(label="", placeholder="Input your text here...", key="text_input")
 
         # Add the input to the session_state if it doesn't already exist
@@ -27,95 +49,117 @@ def get_text():
         if input_text:
             st.session_state.user_input_list.append(input_text)
 
-        return input_text
     else:
-        st.warning("You have exceeded the maximum number of inputs (10).")
-        return ""
+        # If the user is not in the whitelist, limit their inputs to 10
+        if user_ip not in user_inputs:
+            user_inputs[user_ip] = 1
+        else:
+            user_inputs[user_ip] += 1
+
+        if user_inputs[user_ip] <= 10:
+            input_text = st.text_area(label="", placeholder="Input your text here...", key="text_input")
+
+            # Add the input to the session_state if it doesn't already exist
+            if "user_input_list" not in st.session_state:
+                st.session_state.user_input_list = []
+
+            # Append the input to the user_input_list
+            if input_text:
+                st.session_state.user_input_list.append(input_text)
+
+        else:
+            input_text = ""
+            st.warning("You have exceeded the maximum number of inputs (10).")
+
+    return input_text, user_ip
 
 
-template = """
-    Below is a sentence or some keyword. Your goal is to generate text in the corresponding language and style based on the input text.
-    Below is the target writing language and style, and input text:
-    - Language: {language}
-    - Style: {style}
-    - Text: {text}
-
-    - Output Text:
-"""
-
-language_instructions_dict = {
-    "Chinese": "- 请使用中文输出\n",
-    "English": "- Please output English.\n"
-}
-
-style_instructions_dict = {
-    "小红书": "- Using many emojis, hashtags, and exaggerated language.\n",
-    "豆瓣": "- Speaking poetically and affectedly, without expressing oneself directly.\n",
-    "微博": "- Speaking in a sarcastic or ambiguous way, often with the intention of mocking or arguing.\n",
-    "工作日报": "- Please modify the text to a style appropriate for a work report, it should be clear and professional.\n",
-    "Instagram": "- Please make the text suitable for an Instagram post, which may include emojis, hashtags, and short, catchy phrases.\n",
-    "Email": "- Please make the text suitable for an email, which should be polite, professional, and well-organized.\n",
-    "Work Report": "- Please make the text suitable for a work progress report, which should be clear, concise, and informative.\n"
-}
 
 def get_language_instructions(language):
-    if language in language_instructions_dict:
-        return f"{language_instructions_dict[language]}"
-    else:
-        return ""
+    return LANGUAGE_INSTRUCTIONS_DICT.get(language, "")
+
 
 def get_style_instructions(style):
-    if style in style_instructions_dict:
-        return f"{style_instructions_dict[style]}"
-    else:
-        return ""
+    return STYLE_INSTRUCTIONS_DICT.get(style, "")
 
+
+@st.cache_data()
 def load_LLM():
     llm = OpenAI(temperature=0.5)
     return llm
 
-st.set_page_config(page_title="LinguaShine", page_icon=":robot:")
-st.header("LinguaShine")
+def display_interface():
+    col1, col2 = st.columns(2)
 
-col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("LinguaShine is the ultimate tool for anyone looking to polish their language. Try it out today and see the difference for yourself!")
 
-with col1:
-    st.markdown("LinguaShine is the ultimate tool for anyone looking to polish their language. Try it out today and see the difference for yourself!")
+        st.markdown("[Please Give Me a 🌟Star🌟 on Github](https://github.com/chenhuiyu/LinguaShine)")
 
-with col2:
-    st.image(image="DALL·E 2023-04-21 11.03.08.png")
+    with col2:
+        st.image(image="DALL·E 2023-04-21 11.03.08.png", width=250)
 
-st.markdown("## Enter Your Text")
+    st.markdown("## Enter Your Text")
 
-col1, col2 = st.columns(2)
+    col1, col2 = st.columns(2)
+
+    with col1:
+        option_language = st.selectbox("Please select the language you want to input.", ("Chinese", "English"))
+
+    with col2:
+        if option_language == 'Chinese':
+            option_writing_style = st.selectbox("请选择你需要生成的文本格式.", ("小红书", "豆瓣", "微博", "工作日报"))
+        elif option_language == 'English':
+            option_writing_style = st.selectbox("Please select the writing style you want to generate.", ("Instagram", "Email", "Work Report"))
+
+    return option_language, option_writing_style
 
 
-with col1:
-    option_language = st.selectbox("Please select the language you want to input.", ("Chinese", "English"))
+def handle_conversion(llm, input_text, language, style, user_id, option_language, option_writing_style):
+    # Create the PromptTemplate object with the input variables and the template
+    template = """
+    Below is the target output language and style:
+    - Language: {language}
+    - Style: {style}
+    Below is a sentence or some keyword.
+    - Text: {text}
 
-with col2:
-    if option_language == 'Chinese':
-        option_writing_style = st.selectbox("请选择你需要生成的文本格式.",
-                                           ("小红书", "豆瓣", "微博", "工作日报"))
-    elif option_language == 'English':
-        option_writing_style = st.selectbox("Please select the writing style you want to generate.",
-                                           ("Instagram", "Email", "Work Report"))
-# Get the language-specific instructions and the style-specific instructions
-language = get_language_instructions(option_language)
-style = get_style_instructions(option_writing_style)
+    Your goal is to generate output in the corresponding language and style based on the input text:
+    - Output Text:
+    """
 
-input_text = get_text()
-# Define the input variables for the PromptTemplate
-input_variables = ["language", "style", "text"]
+    # Combine the template, the input variables, and the instructions
+    prompt_with_query = template.format(language=language, style=style, text=input_text)
 
-# Create the PromptTemplate object with the input variables and the template
-prompt = PromptTemplate(input_variables=input_variables, template=template)
-llm = load_LLM()
-# Combine the template, the input variables, and the instructions
-prompt_with_query = template.format(language=language, style=style, text=input_text)
-modified_query = llm(prompt_with_query)
+    # Display the modified query
+    if input_text:
+        with get_openai_callback() as cb:
+            output = llm(prompt_with_query)
+            st.markdown("### Your Converted Text")
+            st.success(output)
 
-# Display the modified query
-if input_text:
-    st.markdown("### Your Converted Text")
-    st.write(modified_query)
+            st.write(cb)
+
+            file_path = os.path.join(os.getcwd(), user_id + '.log')
+            with open(file_path, "a+") as f:
+                f.write(option_language + " " + option_writing_style + " " + input_text)
+                f.write(output)
+                f.write('\n')
+
+def main(user_inputs):
+    st.set_page_config(page_title="LinguaShine", page_icon=":robot:")
+    st.header("LinguaShine")
+    option_language, option_writing_style = display_interface()
+    language = get_language_instructions(option_language)
+    style = get_style_instructions(option_writing_style)
+
+    input_text, user_id = get_text(user_inputs)
+
+    llm = load_LLM()
+    if input_text and st.button("Convert!"):
+        handle_conversion(llm, input_text, language, style, user_id, option_language, option_writing_style)
+
+if __name__ == '__main__':
+    if "user_inputs" not in st.session_state:
+        st.session_state.user_inputs = {}
+    main(st.session_state.user_inputs)
