@@ -1,5 +1,4 @@
 import configparser
-import os
 
 import requests
 import streamlit as st
@@ -71,7 +70,7 @@ def get_text(user_inputs):
             input_text = ""
             st.warning("You have exceeded the maximum number of inputs (10).")
 
-    return input_text, user_ip
+    return input_text
 
 
 
@@ -115,7 +114,7 @@ def display_interface():
     return option_language, option_writing_style
 
 
-def handle_conversion(llm, input_text, language, style, user_id, option_language, option_writing_style):
+def handle_conversion(llm, input_text, language, style):
     # Create the PromptTemplate object with the input variables and the template
     template = """
     Below is the target output language and style:
@@ -137,14 +136,7 @@ def handle_conversion(llm, input_text, language, style, user_id, option_language
             output = llm(prompt_with_query)
             st.markdown("### Your Converted Text")
             st.success(output)
-
             st.write(cb)
-
-            file_path = os.path.join(os.getcwd(), user_id + '.log')
-            with open(file_path, "a+") as f:
-                f.write(option_language + " " + option_writing_style + " " + input_text)
-                f.write(output)
-                f.write('\n')
 
 def main(user_inputs):
     st.set_page_config(page_title="LinguaShine", page_icon=":robot:")
@@ -153,11 +145,11 @@ def main(user_inputs):
     language = get_language_instructions(option_language)
     style = get_style_instructions(option_writing_style)
 
-    input_text, user_id = get_text(user_inputs)
+    input_text = get_text(user_inputs)
 
     llm = load_LLM()
     if input_text and st.button("Convert!"):
-        handle_conversion(llm, input_text, language, style, user_id, option_language, option_writing_style)
+        handle_conversion(llm, input_text, language, style)
 
 if __name__ == '__main__':
     if "user_inputs" not in st.session_state:
